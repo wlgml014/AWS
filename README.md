@@ -1,5 +1,5 @@
 # When Test-Time Adaptation Meets Self-Supervised Model
-
+This repository provides the implementation of test-time adaptation methods for self-supervised models on corrupted datasets. The experiments are conducted on CIFAR-10-C, CIFAR-100-C, and ImageNet-C datasets. This document outlines the setup process, environment requirements, and instructions to reproduce the experiments.
 ## Envorinments
 Please create and activate the following conda envrionment. 
 ```bash
@@ -10,6 +10,8 @@ conda activate aws
 ```
 
 ## Setup
+### Dataset Structure
+Ensure that your dataset directory follows the structure below before running the experiments.
 ```bash
 cifar
 ├── data
@@ -18,6 +20,8 @@ cifar
 imagenet
 └── ImageNet-C
 ```
+### Model Checkpoints
+The following structure should be used to store model checkpoints and prototype features.
 ```bash
 cifar
 ├── ckpt
@@ -45,7 +49,8 @@ imagenet
 │   ├── dino_30shot.npy
 └── └── ...
 ```
-## Classification Experiments
+## Running Classification Experiments
+This section provides instructions for running experiments on different datasets using test-time adaptation.
 ### ImageNet-to-ImageNetC task 
 ```bash
 cd imagenet
