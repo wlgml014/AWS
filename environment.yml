@@ -1,4 +1,4 @@
-name: vida
+name: aws
 channels:
   - pytorch
   - defaults
