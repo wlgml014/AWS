@@ -18,7 +18,8 @@ cifar
 │   ├── CIFAR-10-C
 │   └── CIFAR-100-C
 imagenet
-└── ImageNet-C
+├── data
+└── └── ImageNet-C
 ```
 ### Model Checkpoints
 The following structure should be used to store model checkpoints and prototype features.
