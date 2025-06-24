@@ -1,6 +1,6 @@
 export PYTHONPATH=.
 conda deactivate
-conda activate vida
+conda activate aws
 
 # supervised setting
 python cifar10c_vit.py --cfg cfgs/cifar10/aws.yaml --model_opt sl --batch 16 --lr 0.000025

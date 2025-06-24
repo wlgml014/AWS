@@ -1,5 +1,5 @@
 export PYTHONPATH=.
 conda deactivate
-conda activate vida
+conda activate aws
 
 python cifar10c_vit.py --cfg cfgs/cifar10/tent.yaml --checkpoint [your-ckpt-path] --data_dir [your-data-dir] 

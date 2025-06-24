@@ -1,6 +1,6 @@
 export PYTHONPATH=.
 conda deactivate
-conda activate vida
+conda activate aws
 
 # supervised setting
 
