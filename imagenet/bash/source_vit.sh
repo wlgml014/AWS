@@ -1,5 +1,5 @@
 export PYTHONPATH=
 conda deactivate
-conda activate vida
+conda activate aws
 
 python imagenetc.py --cfg ./cfgs/vit/source.yaml

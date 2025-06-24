@@ -1,6 +1,6 @@
 export PYTHONPATH=
 conda deactivate
-conda activate vida
+conda activate aws
 
 # supervised setting
 python imagenetc.py --cfg ./cfgs/vit/aws.yaml --model_opt sl --batch 64 --lr 1e-4
