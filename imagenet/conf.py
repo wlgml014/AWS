@@ -177,7 +177,7 @@ def reset_cfg():
     cfg.merge_from_other_cfg(_CFG_DEFAULT)
 
 
-def load_cfg_fom_args(description="Config options."):
+def load_cfg_from_args(description="Config options."):
     """Load config from command line args and set any specified options."""
     current_time = datetime.now().strftime("%y%m%d_%H%M%S")
     parser = argparse.ArgumentParser(description=description)
@@ -185,7 +185,6 @@ def load_cfg_fom_args(description="Config options."):
                         help="Config file location")
     parser.add_argument("opts", default=None, nargs=argparse.REMAINDER,
                         help="See conf.py for all options")
-    #parser.add_argument("--data_dir", default='/mnt/data01/jihee/data', type=str)
     parser.add_argument("--data_dir", default='./data', type=str)
     parser.add_argument("--checkpoint", default=None, type=str)
     parser.add_argument("--unc_thr", default=0.2, type=float)

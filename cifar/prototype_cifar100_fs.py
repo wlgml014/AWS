@@ -65,8 +65,6 @@ crop = 224
 mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
 
-
-# 학습 데이터에 대한 전처리: 데이터 증강 (RandomCrop, RandomHorizontalFlip)와 정규화
 transform = transforms.Compose([
     transforms.Resize(resize),
     transforms.CenterCrop(crop),
@@ -76,14 +74,10 @@ transform = transforms.Compose([
 ])
 
 
-
-# CIFAR-100 학습 데이터셋 로드 (다운로드가 되어 있지 않으면 자동으로 다운로드)
 dataset = datasets.CIFAR100(root='./data', train=True, download=True, transform=transform)
 
-# CIFAR-100 테스트 데이터셋 로드 (이를 validation 데이터로 사용)
 val_dataset = datasets.CIFAR100(root='./data', train=False, download=True, transform=transform)
 
-# DataLoader 생성: 배치 단위로 데이터를 로드 (여기서는 배치 크기를 128로 설정)
 val_loader = DataLoader(val_dataset, batch_size=128, shuffle=False, num_workers=2)
 
 for seed in seeds:

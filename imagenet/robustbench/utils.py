@@ -221,7 +221,6 @@ def load_model_bayes(model_name: str,
     cov_model_path = model_dir_ / f'{cov_model_name}.pt'
 
     if not isinstance(models[model_name]['gdrive_id'], list):
-        print(1)
         model = models[model_name]['model']()
         model_swa = models[model_name]['model']()
         model_cov = models[model_name]['model']()

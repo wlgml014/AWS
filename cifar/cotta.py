@@ -111,7 +111,6 @@ class CoTTA(nn.Module):
                 outputs_emas.append(outputs_)
         
         if to_aug:
-            #print(1)
             outputs_ema = torch.stack(outputs_emas).mean(0)
         else:
             outputs_ema = standard_ema

@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 seeds = [1]
 
-imagenet_root = "./data/ImageNet"
+imagenet_root = "/path/to/ImageNet"
 train_dir = os.path.join(imagenet_root, "train")
 val_dir = os.path.join(imagenet_root, "val")
 

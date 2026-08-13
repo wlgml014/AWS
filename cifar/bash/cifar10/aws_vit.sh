@@ -21,4 +21,4 @@ python cifar10c_vit.py --cfg cfgs/cifar10/aws.yaml --model_opt moco --batch 16 -
 ### full-shot
 python cifar10c_vit.py --cfg cfgs/cifar10/aws.yaml --model_opt ibot1k --batch 16 --lr 0.00000025
 ### few-shot
-python cifar10c_vit.py --cfg cfgs/cifar10/aws.yaml --model_opt ibot1k --batch 16 --lr 0.00000025 --shot fews
+python cifar10c_vit.py --cfg cfgs/cifar10/aws.yaml --model_opt ibot1k --batch 16 --lr 0.00000025 --shot few

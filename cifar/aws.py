@@ -28,7 +28,6 @@ class AWS(nn.Module):
         self.model_state, self.optimizer_state = \
            copy_model_and_optimizer(self.model, self.optimizer)
         self.ssl_model = copy_model(self.model)
-        #self.model_state = None
         
     def forward(self, x, y=None):
         if self.episodic:
@@ -62,8 +61,6 @@ class AWS(nn.Module):
         outputs_ssl = model.head_ssl(ssl_features)
         # adapt
         
-        
-        
         if self.num_class == 10:
             loss, positive_mask, negative_mask = pseudo_label_contrastive_loss(features, outputs, k=1, n=5, temperature=0.5)
         if self.num_class == 100:
@@ -76,59 +73,17 @@ class AWS(nn.Module):
         else:
             lamda1 = 0.5
             lamda2 = 0.4
-            loss += lamda1 * kd_loss(features, ssl_features)
-            
+            loss += lamda1 * kd_loss(features, ssl_features)   
         
-        
-        #loss = softmax_entropy(outputs).mean(0)
-        #loss = F.cross_entropy(outputs, y)
-        #loss = supervised_contrastive_loss(features, y)
-        # lamda1 = 0.5 # 0.01
-        # lamda2 = 0.4  # 0.1
-        #loss, positive_mask = pseudo_label_loss(features, outputs, 1)
-        # cifar10c
-        #loss, positive_mask, negative_mask = pseudo_label_contrastive_loss(features, outputs, k=1, n=2, temperature=1)
-        #! cifar10c
-        #loss, positive_mask, negative_mask = pseudo_label_contrastive_loss(features, outputs, k=1, n=5, temperature=0.5)
-        
-        #! cifar100c
-        #loss, positive_mask, negative_mask = pseudo_label_contrastive_loss(features, outputs, k=1, n=2, temperature=0.5)
-        
-        # cifar100c
-        #loss, positive_mask, negative_mask = pseudo_label_contrastive_loss(features, outputs, k=5, n=10, temperature=0.5)
-        
-        #lamda1 = 0.01
-        #lamda2 = 0.4
-        #loss, positive_mask, negative_mask = pseudo_label_contrastive_loss(features, outputs, k=1, n=2, temperature=0.5)
-        #loss += lamda1 * relatation_kd_loss(features, ssl_features, positive_mask)
-        #lamda1 = 0.01
-        #loss += lamda1 * kd_loss(features, ssl_features)
         loss += lamda2 * iid_loss(outputs, outputs_ssl.detach())
         pseudo_labels = torch.argmax(outputs, dim=1)
         loss += lamda2 * nn.CrossEntropyLoss()(outputs_ssl, pseudo_labels).mean()
-        #loss += nn.CrossEntropyLoss()(outputs_ssl, pseudo_labels).mean()
             
         loss.backward()
         optimizer.step()
         optimizer.zero_grad()
-        
-        if False:
-            for nm, m  in model.named_modules():
-                for npp, p in m.named_parameters():
-                    if npp in ['weight', 'bias'] and p.requires_grad:
-                        mask = (torch.rand(p.shape)<0.1).float().cuda() 
-                        with torch.no_grad():
-                            p.data = model_state[f"{nm}.{npp}"] * mask + p * (1.-mask)
                                 
         return outputs
-
-
-@torch.jit.script
-def softmax_entropy(x: torch.Tensor) -> torch.Tensor:
-    """Entropy of softmax distribution from logits."""
-    return -(x.softmax(1) * x.log_softmax(1)).sum(1)
-
-
 
 def kd_loss(features, ssl_features, temperature=2):
     features = F.normalize(features, dim=1)
@@ -141,13 +96,7 @@ def relatation_kd_loss(features, ssl_features, positive_mask, temperature=2):
     tta_model_similarities = sim_matrix(features, features)
     ssl_model_similarities = sim_matrix(ssl_features, ssl_features)
 
-    # rkd_loss = nn.KLDivLoss()( \
-    #     F.log_softmax(tta_model_similarities / temperature, dim=1),
-    #     F.softmax(ssl_model_similarities / temperature, dim=1)
-    # ) * (temperature ** 2)
-
-    # rkd_loss = nn.MSELoss(reduction='none')(tta_model_similarities, ssl_model_similarities) * (1-positive_mask)
-    rkd_loss = nn.MSELoss()(features, ssl_features) #* (1-positive_mask)
+    rkd_loss = nn.MSELoss()(features, ssl_features)
 
     return rkd_loss.mean()
 
@@ -161,85 +110,6 @@ def sim_matrix(a, b, eps=1e-8):
     b_norm = b / torch.max(b_n, eps * torch.ones_like(b_n))
     sim_mt = torch.mm(a_norm, b_norm.transpose(0, 1))
     return sim_mt
-
-def supervised_contrastive_loss(features, labels, temperature=0.5):
-    """
-    Compute Supervised Contrastive Loss as defined in:
-    "Supervised Contrastive Learning" (Khosla et al., NeurIPS 2020)
-    
-    Args:
-        features (torch.Tensor): Normalized feature embeddings of shape (batch_size, feature_dim)
-        labels (torch.Tensor): Ground truth labels of shape (batch_size,)
-        temperature (float): Temperature parameter for contrastive loss.
-
-    Returns:
-        loss (torch.Tensor): Supervised contrastive loss.
-    """
-    batch_size = features.shape[0]
-
-    # Normalize feature vectors
-    features = F.normalize(features, dim=1)
-
-    # Compute cosine similarity matrix (batch_size, batch_size)
-    similarity_matrix = torch.matmul(features, features.T) / temperature
-
-    # Create mask to identify positive pairs (same class)
-    labels = labels.contiguous().view(-1, 1)
-    mask = torch.eq(labels, labels.T).float().to(features.device)  # (batch_size, batch_size)
-
-    # Compute loss
-    exp_sim = torch.exp(similarity_matrix)  # Exponential of similarity scores
-    log_prob = similarity_matrix - torch.log(exp_sim.sum(dim=1, keepdim=True))  # Log probability
-
-    # Apply mask to select only positives and compute loss
-    contrastive_loss = -(mask * log_prob).sum(dim=1) / (mask.sum(dim=1) + 1e-8)
-    
-    return contrastive_loss.mean()
-
-def pseudo_label_loss(features, outputs, k=5, temperature=0.5):
-    """
-    Computes contrastive loss using Top-K pseudo-labels.
-    
-    Args:
-        features (torch.Tensor): Feature embeddings (B, D).
-        outputs (torch.Tensor): Model logits (B, num_classes).
-        k (int): Number of top classes for pseudo-labeling.
-        temperature (float): Temperature for contrastive loss.
-
-    Returns:
-        loss (torch.Tensor): Supervised contrastive loss.
-    """
-    batch_size = features.shape[0]
-
-    # Get top-K pseudo-labels
-    top_k_classes, _ = topk_pseudo_labels(outputs, k)
-
-    # Normalize feature vectors
-    features = F.normalize(features, dim=1)
-
-    # Compute cosine similarity matrix (B, B)
-    similarity_matrix = torch.matmul(features, features.T) / temperature
-
-    # Create positive mask where samples share at least one top-K class
-    # labels_matrix = top_k_classes.unsqueeze(1) == top_k_classes.unsqueeze(2) # (64, 5, 5)
-    labels_matrix = top_k_classes[:, None, :] == top_k_classes[None, :, :] # (64, 64, 5)
-    positive_mask = labels_matrix.any(dim=2).float().to(features.device) #- 0.001 #* 2 - 1  # (B, B) # (64,64)
-    #print("positive_mask : ", positive_mask)
-    # Compute log probabilities
-    exp_sim = torch.exp(similarity_matrix)
-    log_prob = similarity_matrix - torch.log(exp_sim.sum(dim=1, keepdim=True))  # (B, B)
-
-    # Element-wise multiplication
-    masked_log_prob = positive_mask * log_prob
-
-    # Summation over dim=1
-    sum_masked_log_prob = masked_log_prob.sum(dim=1)
-    sum_positive_mask = positive_mask.sum(dim=1) + 1e-8
-
-    # Compute final contrastive loss
-    contrastive_loss = -sum_masked_log_prob / sum_positive_mask
-
-    return contrastive_loss.mean(), positive_mask
 
 def pseudo_label_contrastive_loss(features, outputs, k=5, n=20, temperature=0.5):
     """
@@ -329,27 +199,6 @@ def iid_loss(x_out, x_tf_out, lamb=1.0, EPS=sys.float_info.epsilon):
       loss = loss.sum()
       return loss
 
-# def collect_params(model):
-#     """Collect the affine scale + shift parameters from batch norms.
-#
-#     Walk the model's modules and collect all batch normalization parameters.
-#     Return the parameters and their names.
-#
-#     Note: other choices of parameterization are possible!
-#     """
-#     params = []
-#     names = []
-#     for nm, m in model.named_modules():
-#         #if ("norm" in nm or "bn" in nm):
-#         if "head" not in nm:
-#         # if True:
-#         # if "qkv" not in nm:
-#         # if "qkv" in nm:
-#             for np, p in m.named_parameters():
-#                 if np in ['weight', 'bias']:  # weight is scale, bias is shift
-#                     params.append(p)
-#                     names.append(f"{nm}.{np}")
-#     return params, names
 
 def collect_params(model):
     """Collect all trainable parameters.

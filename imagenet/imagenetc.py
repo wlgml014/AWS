@@ -24,12 +24,10 @@ import tent
 import cotta
 import aws
 import sar
-import come
-import petal
 from ssl_model import get_dino, get_moco, get_ibot1k
 
 
-from conf import cfg, load_cfg_fom_args
+from conf import cfg, load_cfg_from_args
 
 
 logger = logging.getLogger(__name__)
@@ -37,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 def evaluate(description):
-    args = load_cfg_fom_args(description)
+    args = load_cfg_from_args(description)
     # configure model
     base_model = load_model(cfg.MODEL.ARCH, cfg.CKPT_DIR,
                        cfg.CORRUPTION.DATASET, ThreatModel.corruptions).cuda()
@@ -131,51 +129,22 @@ def evaluate(description):
     if cfg.MODEL.ADAPTATION == "source":
         logger.info("test-time adaptation: NONE")
         model = setup_source(base_model)
-    if cfg.MODEL.ADAPTATION == "tent":
+    elif cfg.MODEL.ADAPTATION == "tent":
         logger.info(f"test-time adaptation: TENT")
         model = setup_tent(base_model)
-    if cfg.MODEL.ADAPTATION == "cotta":
+    elif cfg.MODEL.ADAPTATION == "cotta":
         logger.info("test-time adaptation: CoTTA")
         model = setup_cotta(base_model, ap=ap)
-    if cfg.MODEL.ADAPTATION == "aws":
+    elif cfg.MODEL.ADAPTATION == "aws":
         logger.info("test-time adaptation: AWS")
         model = setup_aws(base_model, cfg.MODEL_OPT)
-    if cfg.MODEL.ADAPTATION == "sar":
+    elif cfg.MODEL.ADAPTATION == "sar":
         logger.info(f"test-time adaptation: SAR")
         model = setup_sar(base_model)
-    if cfg.MODEL.ADAPTATION == "come":
-        logger.info("test-time adaptation: COME")
-        model = setup_come(base_model)
-    if cfg.MODEL.ADAPTATION == "petal":
-        logger.info(f"test-time adaptation: PETAL")
-        
-        if sl:
-            swa_model_path = "./ckpt/petal/vit_swa.pt"
-            cov_model_path = "./ckpt/petal/vit_cov.pt"
-        elif dino:
-            swa_model_path = "./ckpt/petal/dino_swa.pt"
-            cov_model_path = "./ckpt/petal/dino_cov.pt"
-        elif moco:
-            swa_model_path = "./ckpt/petal/moco_swa.pt"
-            cov_model_path = "./ckpt/petal/moco_cov.pt"
-        elif ibot1k:
-            swa_model_path = "./ckpt/petal/ibot1k_swa.pt"
-            cov_model_path = "./ckpt/petal/ibot1k_cov.pt"
-
-        base_mean_model = copy.deepcopy(base_model)
-        base_cov_model = copy.deepcopy(base_model)
-
-        checkpoint_swa = torch.load(swa_model_path, map_location=torch.device('cpu'))
-        checkpoint_cov = torch.load(cov_model_path, map_location=torch.device('cpu'))
-        
-        base_mean_model.load_state_dict(checkpoint_swa, strict=True)
-        base_cov_model.load_state_dict(checkpoint_cov, strict=True)
-        
-        base_model = base_model.cuda()
-        base_mean_model = base_mean_model.cuda()
-        base_cov_model = base_cov_model.cuda()
-
-        model = setup_petal(base_model, base_mean_model, base_cov_model, ap=ap)
+    else:
+        raise ValueError(
+            f"Unsupported adaptation method: {cfg.MODEL.ADAPTATION}"
+        ) 
         
 
     # evaluate on each severity and type of corruption in turn
@@ -194,8 +163,6 @@ def evaluate(description):
                     logger.warning("not resetting model")
             except:
                 logger.warning("not resetting model")
-            data_dir = "/mnt/data01/jihee/data/ImageNet"
-            
             
             x_test, y_test = load_imagenetc(cfg.CORRUPTION.NUM_EX,
                                            severity, cfg.DATA_DIR, False,
@@ -211,8 +178,8 @@ def evaluate(description):
             All_error.append(err)
 
             logger.info(f"error % [{corruption_type}{severity}]: {err:.2%}")
-    mean_acc = sum(All_error)/len(All_error)
-    logger.info(f"Mean Acc : {mean_acc}")
+    mean_err = sum(All_error)/len(All_error)
+    logger.info(f"Mean error: {mean_err:.2%}")
 
 def setup_source(model):
     """Set up the baseline source model without adaptation."""
@@ -257,22 +224,6 @@ def setup_sar(model):
     logger.info(f"optimizer for adaptation: %s", sar_model.optimizer)
     return sar_model
 
-def setup_come(model):
-    """Set up tent adaptation.
-
-    Configure the model for training + feature modulation by batch statistics,
-    collect the parameters for feature modulation by gradient optimization,
-    set up the optimizer, and then tent the model.
-    """
-    model = come.configure_model(model)
-    params, param_names = come.collect_params(model)
-    come_model = come.COME(model, params, lr = cfg.OPTIM.LR,
-                           steps=cfg.OPTIM.STEPS,
-                           episodic=cfg.MODEL.EPISODIC)
-    logger.info(f"model for adaptation: %s", model)
-    logger.info(f"params for adaptation: %s", param_names)
-    logger.info(f"optimizer for adaptation: %s", come_model.optimizer)
-    return come_model
 
 
 def setup_optimizer(params):
@@ -320,32 +271,6 @@ def setup_cotta(model, ap=0.1):
     logger.info(f"optimizer for adaptation: %s", optimizer)
     return cotta_model
 
-def setup_petal(model, mean_model, cov_model, ap=0.1):
-    """Set up tent adaptation.
-
-    Configure the model for training + feature modulation by batch statistics,
-    collect the parameters for feature modulation by gradient optimization,
-    set up the optimizer, and then tent the model.
-    """
-    model = petal.configure_model(model)
-    mean_model = petal.configure_model(mean_model)
-    cov_model = petal.configure_model(cov_model)
-    params, param_names = petal.collect_params(model)
-    optimizer = setup_optimizer(params)
-    spw = 1e-11
-    perc = 0.003
-    logger.info(f"spw & perc: {spw} , {perc}")
-    petalfim_model = petal.PETALFim(model, mean_model, cov_model, optimizer,
-                           steps=cfg.OPTIM.STEPS,
-                           episodic=cfg.MODEL.EPISODIC,
-                           spw=spw, 
-                           perc=perc,
-                           ap=ap)
-    logger.info(f"model for adaptation: %s", model)
-    logger.info(f"params for adaptation: %s", param_names)
-    logger.info(f"optimizer for adaptation: %s", optimizer)
-    return petalfim_model
-
 def setup_aws(model, model_opt = "sl"):
     """Set up tent adaptation.
 
@@ -391,22 +316,6 @@ def setup_optimizer_aws(params, params_ssl, model_lr, ssl_lr):
     else:
         raise NotImplementedError
 
-class PrototypeClassifier(torch.nn.Module):
-    def __init__(self, in_features, num_classes, prototypes=None):
-        super(PrototypeClassifier, self).__init__()
-        self.weight = torch.nn.Parameter(torch.empty(num_classes, in_features))
-        if prototypes is not None:
-            if isinstance(prototypes, np.ndarray):
-                prototypes = torch.tensor(prototypes, dtype=torch.float32)
-            self.weight.data = torch.nn.functional.normalize(prototypes, p=2, dim=1).cuda()
-        else:
-            torch.nn.init.constant_(self.weight, 1.0)
-            self.weight.data = torch.nn.functional.normalize(self.weight.data, p=2, dim=1).cuda()
-
-    def forward(self, x):
-        x = torch.nn.functional.normalize(x, p=2, dim=1)
-        return 40 * torch.matmul(x, F.normalize(self.weight.data, p=2, dim=1).t())
-        
 def replace_classifier_with_prototype(model, prototypes=None):
     num_classes = prototypes.shape[0] if prototypes is not None else cfg.MODEL.NUM_CLASSES
     classifier_attr = None
@@ -418,11 +327,34 @@ def replace_classifier_with_prototype(model, prototypes=None):
         classifier_attr = "head"
         if isinstance(model.head, torch.nn.Linear):
             in_features = model.head.in_features
-        else:
+        elif isinstance(model.head, torch.nn.Identity):
+            if hasattr(model, "num_features"):
+                in_features = model.num_features
+            elif hasattr(model, "embed_dim"):
+                in_features = model.embed_dim
+            else:
+                raise ValueError("model.head is Identity, but cannot infer feature dimension.")
+        elif isinstance(model.head, torch.nn.Sequential):
             for module in reversed(model.head):
                 if isinstance(module, torch.nn.Linear):
                     in_features = module.in_features
                     break
+        else:
+            try:
+                for module in reversed(list(model.head.children())):
+                    if isinstance(module, torch.nn.Linear):
+                        in_features = module.in_features
+                        break
+            except TypeError:
+                pass
+
+            if in_features is None:
+                if hasattr(model, "num_features"):
+                    in_features = model.num_features
+                elif hasattr(model, "embed_dim"):
+                    in_features = model.embed_dim
+                else:
+                    raise ValueError(f"Cannot infer in_features from head type: {type(model.head)}")
     else:
         raise ValueError("no attribute fc or head")
 
@@ -430,6 +362,30 @@ def replace_classifier_with_prototype(model, prototypes=None):
     setattr(model, classifier_attr, new_classifier)
     logger.info(f"Replaced {classifier_attr} to PrototypeClassifier: in_features={in_features}, num_classes={num_classes}")
     return model
-    
+
+
+class PrototypeClassifier(torch.nn.Module):
+    def __init__(self, in_features, num_classes, prototypes=None):
+        super(PrototypeClassifier, self).__init__()
+
+        self.weight = torch.nn.Parameter(torch.empty(num_classes, in_features))
+
+        with torch.no_grad():
+            if prototypes is not None:
+                if isinstance(prototypes, np.ndarray):
+                    prototypes = torch.tensor(prototypes, dtype=torch.float32)
+
+                prototypes = torch.nn.functional.normalize(prototypes, p=2, dim=1)
+                self.weight.copy_(prototypes)
+            else:
+                torch.nn.init.constant_(self.weight, 1.0)
+                self.weight.copy_(torch.nn.functional.normalize(self.weight, p=2, dim=1))
+
+    def forward(self, x):
+        x = torch.nn.functional.normalize(x, p=2, dim=1)
+        weight = torch.nn.functional.normalize(self.weight, p=2, dim=1)
+
+        return 40 * torch.matmul(x, weight.t())
+
 if __name__ == '__main__':
-    evaluate('"Imagenet-C evaluation.')
+    evaluate("ImageNet-C evaluation.")

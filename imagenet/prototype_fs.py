@@ -14,7 +14,7 @@ import time
 
 seeds = [1]
 
-imagenet_root = "./data/ImageNet"
+imagenet_root = "/path/to/imagenet"
 train_dir = os.path.join(imagenet_root, "train")
 val_dir = os.path.join(imagenet_root, "val")
 
