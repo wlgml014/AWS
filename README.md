@@ -62,7 +62,7 @@ bash ./bash/aws.sh
 cd cifar
 bash ./bash/cifar10/aws_vit.sh
 ```
-## Cifar100-to-Cifar100C task 
+### Cifar100-to-Cifar100C task 
 ```bash
 cd cifar
 bash ./bash/cifar100/aws_vit.sh
