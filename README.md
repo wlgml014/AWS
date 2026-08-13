@@ -41,55 +41,29 @@ If necessary, rename the downloaded files to `moco.pth` and `ibot1k.pth`. The sa
 
 #### Prototype Generation
 
-The prototype files are not included in this repository. Generate both the full-data and 30-shot prototypes for each backbone (`dino`, `moco`, and `ibot1k`) using the scripts below. The `--model_opt` argument selects the backbone, and `--file` specifies the complete output path, including the `.npy` filename.
-
-The paths passed to `--file` are resolved relative to the directory from which the command is run. Therefore, after running `cd cifar`, `ckpt_proto/cifar10/dino_full.npy` is saved as `cifar/ckpt_proto/cifar10/dino_full.npy`. Likewise, after running `cd imagenet`, `ckpt_proto/dino_full.npy` is saved as `imagenet/ckpt_proto/dino_full.npy`. Create the output directories before running the scripts and use the filenames shown below consistently.
-
-For CIFAR-10 and CIFAR-100, run the following commands from the `cifar/` directory. The CIFAR datasets are downloaded automatically into `cifar/data/` if they are not already present.
+Generate full-data and 30-shot prototypes for `dino`, `moco`, and `ibot1k`. Run each block from the repository root; the loops below generate every required file.
 
 ```bash
 cd cifar
 mkdir -p ckpt_proto/cifar10 ckpt_proto/cifar100
-
-# CIFAR-10: full-data prototypes
-python prototype_cifar10.py --model_opt dino --file ckpt_proto/cifar10/dino_full.npy
-python prototype_cifar10.py --model_opt moco --file ckpt_proto/cifar10/moco_full.npy
-python prototype_cifar10.py --model_opt ibot1k --file ckpt_proto/cifar10/ibot1k_full.npy
-
-# CIFAR-10: 30-shot prototypes
-python prototype_cifar10_fs.py --model_opt dino --file ckpt_proto/cifar10/dino_30shot.npy
-python prototype_cifar10_fs.py --model_opt moco --file ckpt_proto/cifar10/moco_30shot.npy
-python prototype_cifar10_fs.py --model_opt ibot1k --file ckpt_proto/cifar10/ibot1k_30shot.npy
-
-# CIFAR-100: full-data prototypes
-python prototype_cifar100.py --model_opt dino --file ckpt_proto/cifar100/dino_full.npy
-python prototype_cifar100.py --model_opt moco --file ckpt_proto/cifar100/moco_full.npy
-python prototype_cifar100.py --model_opt ibot1k --file ckpt_proto/cifar100/ibot1k_full.npy
-
-# CIFAR-100: 30-shot prototypes
-python prototype_cifar100_fs.py --model_opt dino --file ckpt_proto/cifar100/dino_30shot.npy
-python prototype_cifar100_fs.py --model_opt moco --file ckpt_proto/cifar100/moco_30shot.npy
-python prototype_cifar100_fs.py --model_opt ibot1k --file ckpt_proto/cifar100/ibot1k_30shot.npy
+for model in dino moco ibot1k; do
+  python prototype_cifar10.py --model_opt "$model" --file "ckpt_proto/cifar10/${model}_full.npy"
+  python prototype_cifar10_fs.py --model_opt "$model" --file "ckpt_proto/cifar10/${model}_30shot.npy"
+  python prototype_cifar100.py --model_opt "$model" --file "ckpt_proto/cifar100/${model}_full.npy"
+  python prototype_cifar100_fs.py --model_opt "$model" --file "ckpt_proto/cifar100/${model}_30shot.npy"
+done
 ```
 
-For ImageNet, first set `imagenet_root` in both `imagenet/prototype.py` and `imagenet/prototype_fs.py` to the local ImageNet directory containing the `train/` and `val/` subdirectories. Then run the following commands from the `imagenet/` directory:
+For ImageNet, first set `imagenet_root` in `prototype.py` and `prototype_fs.py` to the ImageNet directory containing `train/` and `val/`.
 
 ```bash
 cd imagenet
 mkdir -p ckpt_proto
-
-# Full-data prototypes
-python prototype.py --model_opt dino --file ckpt_proto/dino_full.npy
-python prototype.py --model_opt moco --file ckpt_proto/moco_full.npy
-python prototype.py --model_opt ibot1k --file ckpt_proto/ibot1k_full.npy
-
-# 30-shot prototypes
-python prototype_fs.py --model_opt dino --file ckpt_proto/dino_30shot.npy
-python prototype_fs.py --model_opt moco --file ckpt_proto/moco_30shot.npy
-python prototype_fs.py --model_opt ibot1k --file ckpt_proto/ibot1k_30shot.npy
+for model in dino moco ibot1k; do
+  python prototype.py --model_opt "$model" --file "ckpt_proto/${model}_full.npy"
+  python prototype_fs.py --model_opt "$model" --file "ckpt_proto/${model}_30shot.npy"
+done
 ```
-
-The full-data scripts average features from all training images in each class. The few-shot scripts use 30 training images per class. Each saved `.npy` file contains the class prototypes and the prototype-classifier validation accuracy.
 
 #### Directory Structure
 
