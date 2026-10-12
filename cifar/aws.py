@@ -150,7 +150,7 @@ def pseudo_label_contrastive_loss(features, outputs, k=5, n=20, temperature=0.5)
 
     # Compute positive and negative losses
     positive_loss = -(positive_mask * log_prob).sum(dim=1) / (positive_mask.sum(dim=1) + 1e-8)
-    negative_loss = (negative_mask * similarity_matrix).sum(dim=1) / (negative_mask.sum(dim=1) + 1e-8)
+    negative_loss = (negative_mask * log_prob).sum(dim=1) / (negative_mask.sum(dim=1) + 1e-8)
 
     # Combine losses (balancing factor can be adjusted if needed)
     contrastive_loss = positive_loss + negative_loss
