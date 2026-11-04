@@ -7,7 +7,7 @@ This repository provides the official implementation of **When Test-Time Adaptat
 Our method enables test-time adaptation of self-supervised models under distribution shifts. We evaluate AWS on CIFAR-10-C, CIFAR-100-C, and ImageNet-C.
 
 <p align="center">
-  <img src="src/overview.jpg" alt="AWS overview" width="850">
+  <img src="src/overview.jpg" alt="AWS overview" width="600">
 </p>
 
 This README provides environment setup, checkpoint preparation, and instructions for reproducing the experiments.
