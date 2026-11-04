@@ -2,7 +2,16 @@
 
 [![arXiv](https://img.shields.io/badge/arXiv-2506.23529-b31b1b.svg)](https://arxiv.org/abs/2506.23529)
 
-This repository provides the implementation of test-time adaptation methods for self-supervised models on corrupted datasets. The experiments are conducted on CIFAR-10-C, CIFAR-100-C, and ImageNet-C datasets. This document outlines the setup process, environment requirements, and instructions to reproduce the experiments.
+This repository provides the official implementation of **When Test-Time Adaptation Meets Self-Supervised Models (AWS)**, accepted at **WACV 2027**.
+
+Our method enables test-time adaptation of self-supervised models under distribution shifts. We evaluate AWS on CIFAR-10-C, CIFAR-100-C, and ImageNet-C.
+
+<p align="center">
+  <img src="assets/overview.jpg" alt="AWS overview" width="850">
+</p>
+
+This README provides environment setup, checkpoint preparation, and instructions for reproducing the experiments.
+
 ## Environment
 Please create and activate the following conda environment.
 ```bash
